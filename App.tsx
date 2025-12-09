@@ -7,8 +7,8 @@ import { generateBrandProfile, BrandProfileData } from './services/gemini';
 // --- CONFIG ---
 const AVAILABLE_MODELS = [
     { name: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash (Fast)" },
-    { name: "gemini-2.5-flash-thinking", displayName: "Gemini 2.5 Flash Thinking (Deep)" },
-    { name: "gemini-3-pro-preview", displayName: "Gemini 3.0 Pro (Powerful)" },
+    { name: "gemini-2.5-flash-lite", displayName: "Gemini 2.5 Flash Lite (Ultra Fast)" },
+    { name: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro (Advanced Thinking)" },
 ];
 
 // --- COMPONENTS ---
