@@ -108,7 +108,7 @@ const MetricCard = ({ label, value, icon: Icon, delay = 0 }: { label: string, va
 
 export default function App() {
     // State
-    const [webhookUrl, setWebhookUrl] = useState("https://emanueleserra.app.n8n.cloud/webhook-test/ce8cd3db-560e-4d51-b39b-9ea2e5d3b64a");
+    const [webhookUrl, setWebhookUrl] = useState(import.meta.env.VITE_N8N_WEBHOOK_URL || "");
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].name);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     
