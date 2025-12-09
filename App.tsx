@@ -162,18 +162,36 @@ export default function App() {
                 ...profileData,
                 website: websiteUrl
             };
-            
-            const res = await fetch(webhookUrl, { 
-                method: 'POST', 
+
+            console.log("📤 Sending payload to N8N:", payload);
+            console.log("🔗 Webhook URL:", webhookUrl);
+
+            const res = await fetch(webhookUrl, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload) 
+                body: JSON.stringify(payload)
             });
-            
-            if (res.ok) setStatus("success");
-            else throw new Error(`Status ${res.status}`);
-        } catch (e) {
-            console.warn(e);
-            showError("Errore Invio (Controlla N8N / CORS)");
+
+            console.log("📥 Response status:", res.status);
+
+            if (res.ok) {
+                const responseText = await res.text();
+                console.log("✅ Response body:", responseText);
+                setStatus("success");
+            } else {
+                const errorText = await res.text();
+                console.error("❌ Error response:", errorText);
+                throw new Error(`HTTP ${res.status}: ${errorText || 'No error details'}`);
+            }
+        } catch (e: any) {
+            console.error("❌ Full error:", e);
+
+            // Check if it's a network/CORS error
+            if (e instanceof TypeError && e.message.includes('Failed to fetch')) {
+                showError("Errore di rete o CORS. Verifica che N8N accetti richieste dal browser.");
+            } else {
+                showError(`Errore Invio: ${e.message || 'Errore sconosciuto'}`);
+            }
             setStatus("error");
         }
     };
