@@ -99,6 +99,15 @@ export const generateBrandProfile = async (websiteUrl: string, modelName: string
         return JSON.parse(text) as BrandProfileData;
     } catch (error: any) {
         console.error("Gemini API Error:", error);
+
+        // Check if it's a quota/credit exhausted error
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("quota") ||
+            errorMsg.includes("RESOURCE_EXHAUSTED") ||
+            errorMsg.includes("exceeded your current quota")) {
+            throw new Error("⚠️ Crediti insufficienti per questo modello AI. Prova con Gemini 2.5 Flash o Flash Lite (gratuiti).");
+        }
+
         throw new Error(error.message || "Errore sconosciuto durante la generazione.");
     }
 };
