@@ -244,11 +244,21 @@ export default function App() {
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-500 uppercase">Seleziona Modello AI</label>
                                         <div className="flex gap-2">
-                                            <select value={selectedModel} onChange={e => setSelectedModel(e.target.value)} className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono">
-                                                {AVAILABLE_MODELS.map((m, i) => (
-                                                    <option key={i} value={m.name}>{m.displayName}</option>
-                                                ))}
-                                            </select>
+                            <select 
+    value={selectedModel} 
+    onChange={e => setSelectedModel(e.target.value)} 
+    className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono bg-[#0a0a0a] text-white"
+>
+    {AVAILABLE_MODELS.map((m, i) => (
+        <option 
+            key={i} 
+            value={m.name}
+            className="bg-[#0a0a0a] text-white hover:bg-accent py-3"
+        >
+            {m.displayName}
+        </option>
+    ))}
+</select>
                                         </div>
                                     </div>
                                 </div>
