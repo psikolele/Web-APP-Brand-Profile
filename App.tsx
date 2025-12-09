@@ -47,6 +47,7 @@ const ThinkingBot = () => (
                     </circle>
                     <circle cx="24" cy="0" r="2" fill="#555">
                         <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0.4s" />
+                    </circle>
                     </g>
 
                 <defs>
