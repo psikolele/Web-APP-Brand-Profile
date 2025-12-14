@@ -71,9 +71,13 @@ const brandProfileSchema = {
         data_source: {
             type: Type.STRING,
             description: "Indicates if data is from actual website content or inferred"
+        },
+        scraping_quality: {
+            type: Type.NUMBER,
+            description: "Quality score of the scraped content (1-10), based on completeness and richness"
         }
     },
-    required: ["brand_name", "settore", "keywords", "value_prop", "pain_point_1", "data_source"],
+    required: ["brand_name", "settore", "keywords", "value_prop", "pain_point_1", "data_source", "scraping_quality"],
 };
 
 export interface BrandProfileData {
@@ -99,6 +103,7 @@ export interface BrandProfileData {
     warnings?: string;
     keywords?: string[];
     data_source?: string;
+    scraping_quality?: number;
     [key: string]: any;
 }
 
@@ -148,15 +153,16 @@ Restituisci un oggetto JSON con questi campi (snake_case):
 - target_age: età del target (SOLO se menzionata, altrimenti "Non specificato")
 - target_job: professione target (SOLO se menzionata, altrimenti "Non specificato")
 - target_geo: area geografica (SOLO se menzionata, altrimenti "Non specificato")
-- tone_voice: tono di voce del brand (analizzando il copy del sito)
+- tone_voice: tono di voce del brand (es. "Professionale", "Amichevole", "Tecnico", "Creativo", ecc.)
 - pain_point_1, pain_point_2, pain_point_3: problemi che il brand risolve (SOLO se espliciti)
 - value_prop: proposta di valore (SOLO basata sul contenuto reale)
 - competitor_1_name, competitor_1_instagram: competitor SOLO se menzionati nel sito, altrimenti ""
 - competitor_2_name, competitor_2_instagram: competitor SOLO se menzionati nel sito, altrimenti ""
-- max_emoji: suggerisci un numero (1-5)
-- post_length_min: suggerisci (100-300)
-- post_length_max: suggerisci (400-800)
-- confidence_score: 1-10 (quanto sei sicuro delle informazioni)
+- max_emoji: suggerisci un numero (1-5) basato sul tone_voice
+- post_length_min: suggerisci (100-300) basato sul settore
+- post_length_max: suggerisci (400-800) basato sul settore
+- confidence_score: 1-10 (quanto sei sicuro delle informazioni estratte)
+- scraping_quality: 1-10 (valuta la qualità del contenuto scrapato: 10=contenuto ricco e completo, 1=contenuto scarso/parziale)
 - warnings: segnala se hai dovuto lasciare campi vuoti o se mancano informazioni
 - keywords: array di parole chiave REALMENTE presenti nel sito
 - data_source: SEMPRE "real_content"`,
