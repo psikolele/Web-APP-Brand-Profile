@@ -5,6 +5,40 @@ const apiKey = process.env.API_KEY || '';
 // Use the new SDK initialization
 const ai = new GoogleGenAI({ apiKey });
 
+/**
+ * Scrapes website content using Jina AI Reader API (free service)
+ * Returns clean markdown content of the website
+ */
+async function scrapeWebsite(url: string): Promise<string> {
+    try {
+        console.log(`🌐 Scraping content from: ${url}`);
+
+        // Use Jina AI Reader - free service that returns clean markdown
+        const jinaUrl = `https://r.jina.ai/${url}`;
+        const response = await fetch(jinaUrl, {
+            headers: {
+                'Accept': 'text/plain',
+                'X-Return-Format': 'markdown'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Jina AI scraping failed: ${response.status} ${response.statusText}`);
+        }
+
+        const content = await response.text();
+
+        // Limit content to ~15000 chars to avoid token limits
+        const truncatedContent = content.slice(0, 15000);
+
+        console.log(`✅ Successfully scraped ${truncatedContent.length} characters`);
+        return truncatedContent;
+    } catch (error: any) {
+        console.error("❌ Scraping error:", error.message);
+        throw new Error(`Impossibile scrapare il sito web: ${error.message}. Verifica che l'URL sia corretto e accessibile.`);
+    }
+}
+
 // Define the schema based on user requirements
 const brandProfileSchema = {
     type: Type.OBJECT,
@@ -29,13 +63,17 @@ const brandProfileSchema = {
         post_length_max: { type: Type.NUMBER },
         confidence_score: { type: Type.NUMBER },
         warnings: { type: Type.STRING },
-        keywords: { 
-            type: Type.ARRAY, 
+        keywords: {
+            type: Type.ARRAY,
             items: { type: Type.STRING },
             description: "List of SEO and strategic keywords for the brand"
+        },
+        data_source: {
+            type: Type.STRING,
+            description: "Indicates if data is from actual website content or inferred"
         }
     },
-    required: ["brand_name", "settore", "keywords", "value_prop", "pain_point_1"],
+    required: ["brand_name", "settore", "keywords", "value_prop", "pain_point_1", "data_source"],
 };
 
 export interface BrandProfileData {
@@ -60,6 +98,7 @@ export interface BrandProfileData {
     confidence_score?: number;
     warnings?: string;
     keywords?: string[];
+    data_source?: string;
     [key: string]: any;
 }
 
@@ -69,22 +108,58 @@ export const generateBrandProfile = async (websiteUrl: string, modelName: string
     }
 
     try {
+        // STEP 1: Scrape real website content
+        console.log("📄 Step 1: Scraping website content...");
+        const websiteContent = await scrapeWebsite(websiteUrl);
+
+        if (!websiteContent || websiteContent.length < 100) {
+            throw new Error("Il contenuto del sito web è troppo breve o vuoto. Verifica l'URL.");
+        }
+
+        // STEP 2: Generate brand profile based on REAL content
+        console.log("🤖 Step 2: Analyzing content with AI...");
         const response = await ai.models.generateContent({
             model: modelName,
-            contents: `Analizza questo sito web/brand: "${websiteUrl}".
-            
-            Costruisci un Brand Profile strategico completo, analizza i competitor e genera keyword focus.
-            
-            Se il link non è accessibile o è generico, deduci le informazioni più probabili basandoti sul nome del brand o crea un profilo verosimile per quel tipo di settore.
-            
-            Restituisci ESATTAMENTE un oggetto JSON con questi campi (snake_case):
-            brand_name, website, settore, target_age, target_job, target_geo, tone_voice,
-            pain_point_1, pain_point_2, pain_point_3, value_prop,
-            competitor_1_name, competitor_1_instagram,
-            competitor_2_name, competitor_2_instagram,
-            max_emoji (int), post_length_min (int), post_length_max (int),
-            confidence_score (int 1-10), warnings (string),
-            keywords (array di stringhe).`,
+            contents: `# ISTRUZIONI CRITICHE - ANTI-ALLUCINAZIONE
+
+Sei un analista di brand ESTREMAMENTE RIGOROSO. Devi analizzare SOLO il contenuto del sito web fornito qui sotto.
+
+⚠️ REGOLE ASSOLUTE:
+1. USA SOLO informazioni ESPLICITAMENTE presenti nel contenuto del sito web
+2. Se una informazione NON è presente nel contenuto, scrivi "Non specificato" o lascia il campo vuoto
+3. NON inventare competitor se non sono menzionati nel sito
+4. NON inventare account Instagram se non sono linkati nel sito
+5. NON dedurre, NON presumere, NON inventare NULLA
+6. Se trovi competitor menzionati, usali. Altrimenti lascia vuoto
+7. Il campo "data_source" DEVE essere "real_content"
+
+URL del sito: "${websiteUrl}"
+
+--- INIZIO CONTENUTO REALE DEL SITO WEB ---
+${websiteContent}
+--- FINE CONTENUTO REALE DEL SITO WEB ---
+
+Analizza SOLO questo contenuto e crea un Brand Profile. Se un'informazione non è presente, NON inventarla.
+
+Restituisci un oggetto JSON con questi campi (snake_case):
+- brand_name: nome del brand (dal sito)
+- website: "${websiteUrl}"
+- settore: settore di business (SOLO se chiaramente identificabile)
+- target_age: età del target (SOLO se menzionata, altrimenti "Non specificato")
+- target_job: professione target (SOLO se menzionata, altrimenti "Non specificato")
+- target_geo: area geografica (SOLO se menzionata, altrimenti "Non specificato")
+- tone_voice: tono di voce del brand (analizzando il copy del sito)
+- pain_point_1, pain_point_2, pain_point_3: problemi che il brand risolve (SOLO se espliciti)
+- value_prop: proposta di valore (SOLO basata sul contenuto reale)
+- competitor_1_name, competitor_1_instagram: competitor SOLO se menzionati nel sito, altrimenti ""
+- competitor_2_name, competitor_2_instagram: competitor SOLO se menzionati nel sito, altrimenti ""
+- max_emoji: suggerisci un numero (1-5)
+- post_length_min: suggerisci (100-300)
+- post_length_max: suggerisci (400-800)
+- confidence_score: 1-10 (quanto sei sicuro delle informazioni)
+- warnings: segnala se hai dovuto lasciare campi vuoti o se mancano informazioni
+- keywords: array di parole chiave REALMENTE presenti nel sito
+- data_source: SEMPRE "real_content"`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: brandProfileSchema,
@@ -95,10 +170,18 @@ export const generateBrandProfile = async (websiteUrl: string, modelName: string
         if (!text) {
             throw new Error("Nessuna risposta generata dall'AI.");
         }
-        
-        return JSON.parse(text) as BrandProfileData;
+
+        const result = JSON.parse(text) as BrandProfileData;
+
+        // Validate that data_source is correct
+        if (result.data_source !== "real_content") {
+            result.data_source = "real_content";
+        }
+
+        console.log("✅ Brand profile generated successfully!");
+        return result;
     } catch (error: any) {
-        console.error("Gemini API Error:", error);
+        console.error("❌ Gemini API Error:", error);
 
         // Check if it's a quota/credit exhausted error
         const errorMsg = error.message || "";
