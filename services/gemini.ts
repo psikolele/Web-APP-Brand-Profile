@@ -59,27 +59,27 @@ async function findCompetitors(brandName: string, sector: string, modelName: str
 
         const response = await ai.models.generateContent({
             model: modelName,
-            contents: `Trova i 2 principali competitor diretti di "${brandName}" nel settore "${sector}".
+            contents: `Trova i 2 principali competitor diretti di "${brandName}" nel settore "${sector}" in Italia.
 
-Per ogni competitor, cerca il loro account Instagram ufficiale.
+IMPORTANTE: USA Google Search per trovare informazioni REALI e aggiornate.
 
-ISTRUZIONI CRITICHE:
-1. USA Google Search per trovare competitor REALI e verificati
-2. Cerca gli account Instagram UFFICIALI verificati di questi competitor
-3. Verifica che gli account Instagram esistano realmente
-4. Se non trovi l'account Instagram, lascia il campo vuoto
-5. NON inventare nomi di competitor o account Instagram
+Per ogni competitor:
+1. Trova il nome ufficiale dell'azienda competitor
+2. Cerca il loro account Instagram ufficiale (deve esistere e essere verificabile)
+3. Verifica che gli account Instagram siano reali
 
-Restituisci ESATTAMENTE questo formato JSON:
+Restituisci la risposta in questo ESATTO formato JSON (e SOLO JSON, nient'altro):
 {
-  "competitor_1_name": "Nome competitor 1",
-  "competitor_1_instagram": "@username_instagram o vuoto",
-  "competitor_2_name": "Nome competitor 2",
-  "competitor_2_instagram": "@username_instagram o vuoto"
-}`,
+  "competitor_1_name": "Nome ufficiale competitor 1",
+  "competitor_1_instagram": "@username (o lascia vuoto se non trovato)",
+  "competitor_2_name": "Nome ufficiale competitor 2",
+  "competitor_2_instagram": "@username (o lascia vuoto se non trovato)"
+}
+
+NON aggiungere spiegazioni, SOLO il JSON.`,
             config: {
-                tools: [googleSearchTool],
-                responseMimeType: "application/json",
+                tools: [googleSearchTool]
+                // NOTA: Non usare responseMimeType con tools - causa conflitti
             }
         });
 
@@ -94,12 +94,30 @@ Restituisci ESATTAMENTE questo formato JSON:
             };
         }
 
-        const competitors = JSON.parse(text);
+        console.log("📄 Raw response from Google Search:", text);
+
+        // Try to extract JSON from response (might have markdown formatting)
+        let jsonText = text.trim();
+
+        // Remove markdown code blocks if present
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/```\n?/g, '');
+        }
+
+        const competitors = JSON.parse(jsonText.trim());
         console.log(`✅ Found competitors: ${competitors.competitor_1_name}, ${competitors.competitor_2_name}`);
 
-        return competitors;
+        return {
+            competitor_1_name: competitors.competitor_1_name || "",
+            competitor_1_instagram: competitors.competitor_1_instagram || "",
+            competitor_2_name: competitors.competitor_2_name || "",
+            competitor_2_instagram: competitors.competitor_2_instagram || ""
+        };
     } catch (error: any) {
         console.error("❌ Competitor search error:", error.message);
+        console.error("Full error:", error);
         // Return empty competitors on error - don't fail the entire process
         return {
             competitor_1_name: "",
