@@ -39,6 +39,77 @@ async function scrapeWebsite(url: string): Promise<string> {
     }
 }
 
+/**
+ * Searches for competitors using Google Search Grounding
+ * Uses Gemini with Google Search to find real competitors and their Instagram accounts
+ */
+async function findCompetitors(brandName: string, sector: string, modelName: string): Promise<{
+    competitor_1_name: string;
+    competitor_1_instagram: string;
+    competitor_2_name: string;
+    competitor_2_instagram: string;
+}> {
+    try {
+        console.log(`🔍 Searching for competitors of ${brandName} in ${sector} sector...`);
+
+        // Configure Google Search Grounding tool
+        const googleSearchTool = {
+            googleSearch: {} // For Gemini 2.0+ models
+        };
+
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: `Trova i 2 principali competitor diretti di "${brandName}" nel settore "${sector}".
+
+Per ogni competitor, cerca il loro account Instagram ufficiale.
+
+ISTRUZIONI CRITICHE:
+1. USA Google Search per trovare competitor REALI e verificati
+2. Cerca gli account Instagram UFFICIALI verificati di questi competitor
+3. Verifica che gli account Instagram esistano realmente
+4. Se non trovi l'account Instagram, lascia il campo vuoto
+5. NON inventare nomi di competitor o account Instagram
+
+Restituisci ESATTAMENTE questo formato JSON:
+{
+  "competitor_1_name": "Nome competitor 1",
+  "competitor_1_instagram": "@username_instagram o vuoto",
+  "competitor_2_name": "Nome competitor 2",
+  "competitor_2_instagram": "@username_instagram o vuoto"
+}`,
+            config: {
+                tools: [googleSearchTool],
+                responseMimeType: "application/json",
+            }
+        });
+
+        const text = response.text;
+        if (!text) {
+            console.warn("⚠️ No competitors found via Google Search");
+            return {
+                competitor_1_name: "",
+                competitor_1_instagram: "",
+                competitor_2_name: "",
+                competitor_2_instagram: ""
+            };
+        }
+
+        const competitors = JSON.parse(text);
+        console.log(`✅ Found competitors: ${competitors.competitor_1_name}, ${competitors.competitor_2_name}`);
+
+        return competitors;
+    } catch (error: any) {
+        console.error("❌ Competitor search error:", error.message);
+        // Return empty competitors on error - don't fail the entire process
+        return {
+            competitor_1_name: "",
+            competitor_1_instagram: "",
+            competitor_2_name: "",
+            competitor_2_instagram: ""
+        };
+    }
+}
+
 // Define the schema based on user requirements
 const brandProfileSchema = {
     type: Type.OBJECT,
@@ -182,6 +253,37 @@ Restituisci un oggetto JSON con questi campi (snake_case):
         // Validate that data_source is correct
         if (result.data_source !== "real_content") {
             result.data_source = "real_content";
+        }
+
+        // STEP 3: If competitors are missing, search for them using Google Search Grounding
+        const hasCompetitors = result.competitor_1_name && result.competitor_1_name.trim() !== "";
+
+        if (!hasCompetitors && result.brand_name && result.settore) {
+            console.log("📊 Step 3: Competitors not found in website. Searching with Google Search...");
+
+            try {
+                const competitors = await findCompetitors(
+                    result.brand_name,
+                    result.settore,
+                    modelName
+                );
+
+                // Merge competitor data into result
+                result.competitor_1_name = competitors.competitor_1_name || "";
+                result.competitor_1_instagram = competitors.competitor_1_instagram || "";
+                result.competitor_2_name = competitors.competitor_2_name || "";
+                result.competitor_2_instagram = competitors.competitor_2_instagram || "";
+
+                // Update warnings to reflect Google Search was used
+                if (competitors.competitor_1_name) {
+                    result.warnings = (result.warnings || "") + " | Competitor trovati via Google Search";
+                }
+            } catch (searchError: any) {
+                console.warn("⚠️ Could not find competitors via Google Search:", searchError.message);
+                // Continue without competitors - don't fail the entire process
+            }
+        } else if (hasCompetitors) {
+            console.log("✅ Competitors found in website content");
         }
 
         console.log("✅ Brand profile generated successfully!");
