@@ -89,20 +89,72 @@ const EditToast = ({ show, onClose }: { show: boolean, onClose: () => void }) =>
     );
 };
 
-const MetricCard = ({ label, value, icon: Icon, delay = 0 }: { label: string, value: string | number, icon?: any, delay?: number }) => (
-    <div 
-        className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex items-center justify-between gap-3 animate-reveal group cursor-default hover:border-accent/30 transition-colors h-full"
-        style={{ animationDelay: `${delay}ms` }}
-    >
-        <div className="flex items-center gap-3">
-            <div className="text-gray-500 group-hover:text-accent transition-colors">
-                {Icon && <Icon width={16} height={16} />}
+// Metric Card with optional progress bar
+const MetricCard = ({
+    label,
+    value,
+    icon: Icon,
+    delay = 0,
+    showProgress = false,
+    progressValue = 0,
+    maxProgress = 10,
+    unit = ""
+}: {
+    label: string,
+    value: string | number,
+    icon?: any,
+    delay?: number,
+    showProgress?: boolean,
+    progressValue?: number,
+    maxProgress?: number,
+    unit?: string
+}) => {
+    const progressPercent = (progressValue / maxProgress) * 100;
+
+    // Calculate color based on progress (0 = red, 10 = green)
+    const getProgressColor = (value: number) => {
+        const percent = (value / maxProgress) * 100;
+        if (percent >= 80) return 'from-emerald-500 to-green-400'; // Green
+        if (percent >= 60) return 'from-yellow-500 to-lime-400'; // Yellow-Green
+        if (percent >= 40) return 'from-orange-500 to-yellow-400'; // Orange-Yellow
+        if (percent >= 20) return 'from-red-500 to-orange-400'; // Red-Orange
+        return 'from-red-600 to-red-500'; // Red
+    };
+
+    return (
+        <div
+            className="bg-white/[0.03] border border-white/10 rounded-xl p-4 animate-reveal group cursor-default hover:border-accent/30 hover:bg-white/[0.05] transition-all duration-300 h-full"
+            style={{ animationDelay: `${delay}ms` }}
+        >
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:scale-110 transition-transform">
+                    {Icon && <Icon width={16} height={16} />}
+                </div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
             </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+
+            <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-white font-mono">{value}</span>
+                {unit && <span className="text-sm text-gray-500">{unit}</span>}
+            </div>
+
+            {showProgress && (
+                <div className="mt-3 space-y-1">
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full bg-gradient-to-r ${getProgressColor(progressValue)} transition-all duration-700 rounded-full`}
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-gray-500 font-mono">
+                        <span>Low</span>
+                        <span>High</span>
+                    </div>
+                </div>
+            )}
         </div>
-        <span className="text-lg font-bold text-white font-mono group-hover:scale-110 transition-transform duration-300">{value}</span>
-    </div>
-);
+    );
+};
 
 // --- MAIN APP ---
 
@@ -325,25 +377,39 @@ export default function App() {
                             {/* Increased bottom padding pb-8 to ensure it doesn't touch the edge */}
                             <div className={`transition-all duration-700 w-full ${profileData && status !== 'generating' ? 'opacity-100 translate-y-0 pb-8' : 'opacity-0 translate-y-10 hidden'}`}>
                                 
-                                {/* METRICS GRID (MOVED TOP) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pt-6 border-t border-white/5 w-full">
-                                    <MetricCard 
-                                        label="Confidence" 
-                                        value={`${profileData?.confidence_score}/10`} 
-                                        icon={Icons.Zap} 
+                                {/* METRICS GRID - 4 COLUMNS */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 pt-6 border-t border-white/5 w-full">
+                                    <MetricCard
+                                        label="AI Confidence"
+                                        value={profileData?.confidence_score || 0}
+                                        icon={Icons.Zap}
                                         delay={0}
+                                        showProgress={true}
+                                        progressValue={profileData?.confidence_score || 0}
+                                        maxProgress={10}
+                                        unit="/10"
                                     />
-                                    <MetricCard 
-                                        label="Max Emoji" 
-                                        value={profileData?.max_emoji || 0} 
-                                        icon={Icons.Send} 
+                                    <MetricCard
+                                        label="Scraping Quality"
+                                        value={profileData?.scraping_quality || 0}
+                                        icon={Icons.Check}
                                         delay={100}
+                                        showProgress={true}
+                                        progressValue={profileData?.scraping_quality || 0}
+                                        maxProgress={10}
+                                        unit="/10"
                                     />
-                                    <MetricCard 
-                                        label="Content Length" 
-                                        value={`${profileData?.post_length_min}-${profileData?.post_length_max}`} 
-                                        icon={Icons.Check} 
+                                    <MetricCard
+                                        label="Max Emoji"
+                                        value={profileData?.max_emoji || 0}
+                                        icon={Icons.Send}
                                         delay={200}
+                                    />
+                                    <MetricCard
+                                        label="Tone of Voice"
+                                        value={profileData?.tone_voice?.split(',')[0].trim() || 'N/A'}
+                                        icon={Icons.Shield}
+                                        delay={300}
                                     />
                                 </div>
 
