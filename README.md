@@ -4,6 +4,8 @@
 
 # Run and deploy your AI Studio app
 
+Repository: **psikolele/client-app-social**
+
 This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1uPZ9lskzUeIgqb27cAKT1t9Uw5BdfbzW
