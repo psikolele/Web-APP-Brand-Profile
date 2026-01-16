@@ -633,8 +633,8 @@ export default function App() {
 
             {/* Version Footer */}
             <div className="fixed bottom-2 right-4 z-40 text-[10px] text-gray-600 font-mono opacity-50 hover:opacity-100 transition-opacity">
-                v1.1 | Brand Profile Generator
+                v1.2 | Brand Profile Generator
             </div>
-        </div >
+        </div>
     );
 }
