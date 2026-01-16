@@ -18,12 +18,12 @@ const ThinkingBot = () => (
         <div className="relative w-24 h-24 mb-6 animate-float">
             {/* Glow behind */}
             <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl bot-glow"></div>
-            
+
             <svg viewBox="0 0 100 100" className="w-full h-full relative z-10 drop-shadow-2xl">
                 {/* Head */}
                 <rect x="20" y="20" width="60" height="50" rx="10" fill="#111" stroke="#333" strokeWidth="2" />
                 <rect x="20" y="20" width="60" height="50" rx="10" fill="url(#metalGradient)" opacity="0.5" />
-                
+
                 {/* Antenna */}
                 <line x1="50" y1="20" x2="50" y2="10" stroke="#555" strokeWidth="3" />
                 <circle cx="50" cy="10" r="4" fill="#FF6B35" className="animate-pulse" />
@@ -48,7 +48,7 @@ const ThinkingBot = () => (
                     <circle cx="24" cy="0" r="2" fill="#555">
                         <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0.4s" />
                     </circle>
-                    </g>
+                </g>
 
                 <defs>
                     <linearGradient id="metalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -160,14 +160,16 @@ const MetricCard = ({
 
 export default function App() {
     // State
-    const [webhookUrl, setWebhookUrl] = useState(import.meta.env.VITE_N8N_WEBHOOK_URL || "");
+    // Use environment variable, fallback to hardcoded value if missing (Deployment Fix v1.1)
+    const [webhookUrl, setWebhookUrl] = useState(import.meta.env.VITE_N8N_WEBHOOK_URL || "https://emanueleserra.app.n8n.cloud/webhook/94f98082-9ced-4244-b493-3d54d7328478");
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].name);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
-    
+
     // Core inputs/outputs
     const [websiteUrl, setWebsiteUrl] = useState("");
+    const [email, setEmail] = useState("");
     const [profileData, setProfileData] = useState<BrandProfileData | null>(null);
-    
+
     // Status states
     const [status, setStatus] = useState<"idle" | "generating" | "publishing" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
@@ -175,7 +177,7 @@ export default function App() {
 
     const handleGenerate = async () => {
         if (!websiteUrl) return showError("Inserisci un sito web o nome brand.");
-        
+
         setStatus("generating");
         setErrorMsg("");
         setProfileData(null);
@@ -212,7 +214,26 @@ export default function App() {
         try {
             const payload = {
                 ...profileData,
-                website: websiteUrl
+                website: websiteUrl,
+                email_contatto: email, // Required by N8N
+                // Explicitly mapping fields for N8N optimization (skipping re-analysis)
+                tone_of_voice: profileData.tone_voice,
+                keywords: profileData.keywords,
+                pain_points: [
+                    profileData.pain_point_1,
+                    profileData.pain_point_2,
+                    profileData.pain_point_3
+                ].filter(Boolean),
+                industry_data: {
+                    settore: profileData.settore,
+                    target_age: profileData.target_age,
+                    target_job: profileData.target_job,
+                    target_geo: profileData.target_geo,
+                    competitor_1_name: profileData.competitor_1_name,
+                    competitor_1_instagram: profileData.competitor_1_instagram,
+                    competitor_2_name: profileData.competitor_2_name,
+                    competitor_2_instagram: profileData.competitor_2_instagram
+                }
             };
 
             console.log("📤 Sending payload to N8N:", payload);
@@ -309,26 +330,30 @@ export default function App() {
                                         <label className="text-[10px] font-bold text-gray-500 uppercase">Webhook Endpoint</label>
                                         <input type="text" value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono" />
                                     </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Email Contatto (Required)</label>
+                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono" />
+                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-500 uppercase">Seleziona Modello AI</label>
                                         <div className="flex gap-2">
-                            <select 
-    value={selectedModel} 
-    onChange={e => setSelectedModel(e.target.value)} 
-    className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono bg-[#0a0a0a] text-white"
->
-    {AVAILABLE_MODELS.map((m, i) => (
-        <option 
-            key={i} 
-            value={m.name}
-            className="bg-[#0a0a0a] text-white hover:bg-accent py-3"
-        >
-            {m.displayName}
-        </option>
-    ))}
-</select>
+                                            <select
+                                                value={selectedModel}
+                                                onChange={e => setSelectedModel(e.target.value)}
+                                                className="w-full tech-input px-4 py-2.5 rounded-lg text-sm font-mono bg-[#0a0a0a] text-white"
+                                            >
+                                                {AVAILABLE_MODELS.map((m, i) => (
+                                                    <option
+                                                        key={i}
+                                                        value={m.name}
+                                                        className="bg-[#0a0a0a] text-white hover:bg-accent py-3"
+                                                    >
+                                                        {m.displayName}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -338,25 +363,25 @@ export default function App() {
 
                     {/* MAIN INPUT */}
                     <div className="flex flex-col gap-6 relative min-h-[400px]">
-                        
+
                         {/* INPUT SECTION */}
                         <div className="flex flex-col md:flex-row gap-4 items-end">
                             <div className="flex-1 space-y-2 w-full">
                                 <label className="text-xs font-bold text-accent uppercase tracking-widest font-mono pl-1">01. Source Input</label>
                                 <div className="relative group">
                                     <Icons.Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-accent transition-colors" width={18} height={18} />
-                                    <input 
-                                        type="text" 
-                                        value={websiteUrl} 
-                                        onChange={e => setWebsiteUrl(e.target.value)} 
-                                        placeholder="Costruisci il tuo brand profile partendo dal sito web (es. https://...)" 
-                                        className="w-full tech-input rounded-xl py-4 pl-12 pr-4 text-sm font-mono placeholder:text-gray-600" 
+                                    <input
+                                        type="text"
+                                        value={websiteUrl}
+                                        onChange={e => setWebsiteUrl(e.target.value)}
+                                        placeholder="Costruisci il tuo brand profile partendo dal sito web (es. https://...)"
+                                        className="w-full tech-input rounded-xl py-4 pl-12 pr-4 text-sm font-mono placeholder:text-gray-600"
                                         onKeyDown={e => e.key === 'Enter' && handleGenerate()}
                                     />
                                 </div>
                             </div>
-                            <button 
-                                onClick={handleGenerate} 
+                            <button
+                                onClick={handleGenerate}
                                 disabled={status === 'generating' || !websiteUrl}
                                 className="w-full md:w-auto h-[54px] px-8 rounded-xl bg-surface border border-white/10 text-white hover:bg-accent hover:text-white transition-all font-mono font-bold uppercase text-sm tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -376,7 +401,7 @@ export default function App() {
                             {/* RESULTS SECTION INSIDE GLASS */}
                             {/* Increased bottom padding pb-8 to ensure it doesn't touch the edge */}
                             <div className={`transition-all duration-700 w-full ${profileData && status !== 'generating' ? 'opacity-100 translate-y-0 pb-8' : 'opacity-0 translate-y-10 hidden'}`}>
-                                
+
                                 {/* METRICS GRID - 4 COLUMNS */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 pt-6 border-t border-white/5 w-full">
                                     <MetricCard
@@ -425,26 +450,26 @@ export default function App() {
                                         <div className="space-y-4">
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Brand Name</div>
-                                                <input 
-                                                    className="editable-field w-full text-white font-medium text-lg" 
-                                                    value={profileData?.brand_name || ''} 
+                                                <input
+                                                    className="editable-field w-full text-white font-medium text-lg"
+                                                    value={profileData?.brand_name || ''}
                                                     onChange={(e) => handleUpdate('brand_name', e.target.value)}
                                                 />
                                             </div>
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Settore</div>
-                                                <input 
-                                                    className="editable-field w-full text-white font-medium" 
-                                                    value={profileData?.settore || ''} 
+                                                <input
+                                                    className="editable-field w-full text-white font-medium"
+                                                    value={profileData?.settore || ''}
                                                     onChange={(e) => handleUpdate('settore', e.target.value)}
                                                 />
                                             </div>
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Tone of Voice</div>
-                                                <textarea 
+                                                <textarea
                                                     rows={2}
-                                                    className="editable-field w-full text-accent font-medium resize-none" 
-                                                    value={profileData?.tone_voice || ''} 
+                                                    className="editable-field w-full text-accent font-medium resize-none"
+                                                    value={profileData?.tone_voice || ''}
                                                     onChange={(e) => handleUpdate('tone_voice', e.target.value)}
                                                 />
                                             </div>
@@ -462,25 +487,25 @@ export default function App() {
                                         <div className="space-y-4">
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Age Range</div>
-                                                <input 
-                                                    className="editable-field w-full text-white font-medium" 
-                                                    value={profileData?.target_age || ''} 
+                                                <input
+                                                    className="editable-field w-full text-white font-medium"
+                                                    value={profileData?.target_age || ''}
                                                     onChange={(e) => handleUpdate('target_age', e.target.value)}
                                                 />
                                             </div>
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Geo</div>
-                                                <input 
-                                                    className="editable-field w-full text-white font-medium" 
-                                                    value={profileData?.target_geo || ''} 
+                                                <input
+                                                    className="editable-field w-full text-white font-medium"
+                                                    value={profileData?.target_geo || ''}
                                                     onChange={(e) => handleUpdate('target_geo', e.target.value)}
                                                 />
                                             </div>
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Job/Role</div>
-                                                <input 
-                                                    className="editable-field w-full text-white font-medium" 
-                                                    value={profileData?.target_job || ''} 
+                                                <input
+                                                    className="editable-field w-full text-white font-medium"
+                                                    value={profileData?.target_job || ''}
                                                     onChange={(e) => handleUpdate('target_job', e.target.value)}
                                                 />
                                             </div>
@@ -498,10 +523,10 @@ export default function App() {
                                         <div className="space-y-4">
                                             <div>
                                                 <div className="text-[10px] text-gray-500 uppercase flex items-center gap-1">Value Proposition</div>
-                                                <textarea 
+                                                <textarea
                                                     rows={3}
-                                                    className="editable-field w-full text-white text-xs leading-relaxed resize-none" 
-                                                    value={profileData?.value_prop || ''} 
+                                                    className="editable-field w-full text-white text-xs leading-relaxed resize-none"
+                                                    value={profileData?.value_prop || ''}
                                                     onChange={(e) => handleUpdate('value_prop', e.target.value)}
                                                 />
                                             </div>
@@ -547,8 +572,8 @@ export default function App() {
                                         <div className="flex flex-wrap gap-2">
                                             {profileData?.keywords && profileData.keywords.length > 0 ? (
                                                 profileData.keywords.map((kw, i) => (
-                                                    <span 
-                                                        key={i} 
+                                                    <span
+                                                        key={i}
                                                         onClick={() => removeKeyword(kw)}
                                                         className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-xs text-accent-glow font-mono cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all"
                                                         title="Click to remove"
@@ -563,7 +588,7 @@ export default function App() {
                                         <p className="text-[10px] text-gray-600 mt-4 italic">Click on a keyword to remove it.</p>
                                     </div>
                                 </div>
-                                
+
                             </div>
                         </div>
 
@@ -580,9 +605,9 @@ export default function App() {
                                 <button onClick={reset} className="mt-4 text-xs text-gray-400 hover:text-white underline font-mono">NEW PROFILE</button>
                             </div>
                         ) : (
-                            <button 
-                                onClick={handlePublish} 
-                                disabled={status === 'publishing'} 
+                            <button
+                                onClick={handlePublish}
+                                disabled={status === 'publishing'}
                                 className={`w-full py-4 rounded-xl font-bold font-mono tracking-widest uppercase text-white flex items-center justify-center gap-3 btn-primary ${status === 'publishing' ? 'opacity-80' : ''}`}
                             >
                                 {status === 'publishing' ? 'Sending Data...' : 'Deploy to Automation'}
@@ -605,5 +630,11 @@ export default function App() {
                 </div>
             )}
         </div>
+        
+        {/* Version Footer */ }
+    <div className="fixed bottom-2 right-4 z-40 text-[10px] text-gray-600 font-mono opacity-50 hover:opacity-100 transition-opacity">
+        v1.1 | Brand Profile Generator
+    </div>
+    </div >
     );
 }
