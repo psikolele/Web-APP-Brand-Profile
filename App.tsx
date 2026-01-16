@@ -160,7 +160,8 @@ const MetricCard = ({
 
 export default function App() {
     // State
-    const [webhookUrl, setWebhookUrl] = useState(import.meta.env.VITE_N8N_WEBHOOK_URL || "");
+    // Use environment variable, fallback to hardcoded value if missing (Deployment Fix v1.1)
+    const [webhookUrl, setWebhookUrl] = useState(import.meta.env.VITE_N8N_WEBHOOK_URL || "https://emanueleserra.app.n8n.cloud/webhook/94f98082-9ced-4244-b493-3d54d7328478");
     const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].name);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
 
@@ -629,5 +630,11 @@ export default function App() {
                 </div>
             )}
         </div>
+        
+        {/* Version Footer */ }
+    <div className="fixed bottom-2 right-4 z-40 text-[10px] text-gray-600 font-mono opacity-50 hover:opacity-100 transition-opacity">
+        v1.1 | Brand Profile Generator
+    </div>
+    </div >
     );
 }
